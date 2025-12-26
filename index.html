@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reels Social Media</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        .header {
+            background: #fff;
+            padding: 16px 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .header .logo {
+            font-size: 1.7rem;
+            font-weight: bold;
+            color: #1877f2;
+            letter-spacing: 2px;
+        }
+        .header .search {
+            flex: 1;
+            margin: 0 24px;
+        }
+        .header input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            outline: none;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 32px auto;
+            gap: 32px;
+        }
+        .sidebar {
+            width: 220px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 24px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            height: fit-content;
+        }
+        .sidebar h3 {
+            margin-top: 0;
+            color: #1877f2;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin: 16px 0;
+            color: #444;
+            cursor: pointer;
+        }
+        .feed {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .post {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 20px 24px;
+        }
+        .post .user {
+            font-weight: bold;
+            color: #1877f2;
+        }
+        .post .time {
+            color: #888;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+        .post .content {
+            margin: 12px 0 0 0;
+            color: #222;
+        }
+        .post .actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 24px;
+        }
+        .post .actions span {
+            color: #888;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+        .new-post {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+        .new-post textarea {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            resize: none;
+            font-size: 1em;
+        }
+        .new-post button {
+            margin-top: 10px;
+            background: #1877f2;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        @media (max-width: 600px) {
+            .container { flex-direction: column; gap: 0; }
+            .sidebar { width: 100%; margin-bottom: 24px; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .header .search, .header .profile, .header-actions { width: 100%; margin: 8px 0; justify-content: flex-end; }
+            .header-actions { flex-wrap: wrap; gap: 6px; }
+            .feed, .post, .new-post { padding: 8px !important; }
+            #searchResults { left: 0; transform: none; min-width: 90vw; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:100;">
+        <div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);min-width:320px;">
+            <h2 style="margin-top:0;color:#1877f2;">Login</h2>
+            <div id="g_id_onload"
+                data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                data-callback="onGoogleSignIn"
+                data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+            <button onclick="continueAsGuest()" style="width:100%;background:#eee;color:#444;border:none;padding:10px;border-radius:8px;font-size:1em;cursor:pointer;margin-top:16px;">Continue as Guest</button>
+        </div>
+    </div>
+    <!-- User Switch Modal -->
+    <div id="userSwitchModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);align-items:center;justify-content:center;z-index:200;">
+        <div style="background:#fff;padding:24px 20px;border-radius:12px;min-width:300px;">
+            <h3>Switch User</h3>
+            <input id="switchUserName" type="text" placeholder="User Name" style="width:100%;padding:8px;margin-bottom:12px;border-radius:8px;border:1px solid #ddd;">
+            <button onclick="switchUser()" style="width:100%;background:#1877f2;color:#fff;border:none;padding:10px;border-radius:8px;font-size:1em;cursor:pointer;">Switch</button>
+            <button onclick="closeUserSwitch()" style="width:100%;background:#eee;color:#444;border:none;padding:10px;border-radius:8px;font-size:1em;cursor:pointer;margin-top:8px;">Cancel</button>
+        </div>
+    </div>
+    <div id="notificationBar" style="display:none;position:fixed;top:70px;right:30px;z-index:300;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:16px 24px;min-width:220px;"></div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <div class="header">
+        <div class="logo">Reels</div>
+        <div class="search">
+            <input id="searchInput" type="text" placeholder="Search..." oninput="searchContent()">
+        </div>
+        <div class="header-actions" style="display:flex;align-items:center;gap:8px;">
+            <button id="darkModeBtn" onclick="toggleDarkMode()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">🌙</button>
+            <button onclick="openUserSwitch()" id="switchUserBtn" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Switch User</button>
+            <button id="logoutBtn" onclick="logout()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Logout</button>
+            <div class="profile" style="position:relative;">
+                <label for="profileUpload" style="cursor:pointer;">
+                    <img id="profileImg" src="" alt="Profile" style="width:40px;height:40px;border-radius:50%;background:#eee;object-fit:cover;">
+                </label>
+                <input type="file" id="profileUpload" accept="image/*" style="display:none;" onchange="uploadProfile(event)">
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="sidebar">
+            <h3>Menu</h3>
+            <ul>
+                <li onclick="showFeed()">Home</li>
+                <li onclick="showReels()">Reels</li>
+                <li onclick="showStories()">Stories</li>
+                <li onclick="showNotes()">Notes</li>
+                <li>Messages</li>
+                <li>Notifications</li>
+                <li id="profileMenu" style="position:relative;" onclick="toggleProfileSubmenu(event)">Profile
+                    <div id="profileSubmenu" style="display:none;position:absolute;left:100%;top:0;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 0;min-width:140px;z-index:1000;">
+                        <!-- Dynamic submenu options -->
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div class="feed" id="feedSection">
+            <div class="new-post">
+                <textarea id="postText" rows="3" placeholder="What's on your mind?"></textarea>
+                <input type="file" id="postImage" accept="image/*" style="margin-top:8px;">
+                <div id="postPreview"></div>
+                <button onclick="addPost()">Post</button>
+            </div>
+            <div id="posts"></div>
+        </div>
+        <div class="feed" id="reelsSection" style="display:none;">
+            <div class="new-post">
+                <input type="file" id="reelVideo" accept="video/*" style="margin-bottom:8px;">
+                <input type="file" id="reelSong" accept="audio/*" style="margin-bottom:8px;">
+                <div id="reelPreview"></div>
+                <button onclick="addReel()">Post Reel</button>
+            </div>
+            <div id="reels"></div>
+        </div>
+        <div class="feed" id="storiesSection" style="display:none;">
+            <div class="new-post">
+                <textarea id="storyText" rows="2" placeholder="Share a story..."></textarea>
+                <input type="file" id="storyImage" accept="image/*,video/*" style="margin-top:8px;">
+                <input type="file" id="storySong" accept="audio/*" style="margin-top:8px;">
+                <div id="storyPreview"></div>
+                <button onclick="addStory()">Post Story</button>
+            </div>
+            <div id="stories"></div>
+        </div>
+        <div class="feed" id="notesSection" style="display:none;">
+            <div class="new-post">
+                <textarea id="noteText" rows="1" maxlength="60" placeholder="Share a note..."></textarea>
+                <input type="file" id="noteSong" accept="audio/*" style="margin-top:8px;">
+                <button onclick="addNote()">Post Note</button>
+            </div>
+            <div id="notes"></div>
+        </div>
+        <div class="feed" id="profileSection" style="display:none;">
+            <div class="new-post" style="margin-bottom:16px;">
+                <h2>Your Profile</h2>
+                <div style="display:flex;align-items:center;gap:16px;">
+                    <img id="profileImgLarge" src="" alt="Profile" style="width:80px;height:80px;border-radius:50%;background:#eee;object-fit:cover;">
+                    <div>
+                        <input id="profileName" type="text" placeholder="Your Name" style="font-size:1.2em;padding:6px 10px;border-radius:8px;border:1px solid #ddd;">
+                        <button onclick="saveProfile()" style="margin-left:8px;background:#1877f2;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:1em;cursor:pointer;">Save</button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3>Your Posts</h3>
+                <div id="profilePosts"></div>
+                <h3 style="margin-top:32px;">Your Reels</h3>
+                <div id="profileReels"></div>
+            </div>
+        </div>
+    </div>
+    <div id="searchResults" style="display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#fff;z-index:500;min-width:300px;max-width:90vw;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:16px;"></div>
+    <style id="darkModeStyle"></style>
+    <script>
+    // --- Login ---
+    function onGoogleSignIn(response) {
+        // Parse JWT to get user info
+        const data = parseJwt(response.credential);
+        localStorage.setItem('reels_user_email', data.email);
+        localStorage.setItem('reels_user_name', data.name);
+        localStorage.setItem('reels_profile_img', data.picture);
+        document.getElementById('loginModal').style.display = 'none';
+        loadProfileImg();
+    }
+    function continueAsGuest() {
+        localStorage.setItem('reels_user_email', 'guest');
+        localStorage.setItem('reels_user_name', 'Guest');
+        document.getElementById('loginModal').style.display = 'none';
+        loadProfileImg();
+    }
+    function parseJwt(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+    window.onload = function() {
+        if(!localStorage.getItem('reels_user_email')) {
+            document.getElementById('loginModal').style.display = 'flex';
+        } else {
+            document.getElementById('loginModal').style.display = 'none';
+        }
+        loadProfileImg();
+        loadPosts();
+        loadReels();
+        loadStories();
+        loadNotes();
+    }
+    // --- Profile Image ---
+    function uploadProfile(e) {
+        const file = e.target.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                localStorage.setItem('reels_profile_img', ev.target.result);
+                document.getElementById('profileImg').src = ev.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+    function loadProfileImg() {
+        const img = localStorage.getItem('reels_profile_img');
+        document.getElementById('profileImg').src = img ? img : '';
+    }
+    // --- Feed & Posts ---
+    function addPost() {
+        const text = document.getElementById('postText').value;
+        const imgInput = document.getElementById('postImage');
+        if(!text && !imgInput.files[0]) return alert('Write something or add an image!');
+        const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
+        if(imgInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                posts.unshift({text, img: ev.target.result, time: new Date().toLocaleString()});
+                localStorage.setItem('reels_posts', JSON.stringify(posts));
+                document.getElementById('postText').value = '';
+                imgInput.value = '';
+                loadPosts();
+            }
+            reader.readAsDataURL(imgInput.files[0]);
+        } else {
+            posts.unshift({text, img: null, time: new Date().toLocaleString()});
+            localStorage.setItem('reels_posts', JSON.stringify(posts));
+            document.getElementById('postText').value = '';
+            loadPosts();
+        }
+    }
+    function loadPosts() {
+        const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
+        const postsDiv = document.getElementById('posts');
+        postsDiv.innerHTML = posts.map((post, i) => `
+            <div class="post">
+                <span class="user">You</span>
+                <span class="time">${post.time}</span>
+                <div class="content">${highlightTags(post.text ? post.text : '')}</div>
+                ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
+                <div class="actions">
+                    <span>Like</span>
+                    <span>Comment</span>
+                    <span>Share</span>
+                    <span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})">Delete</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    function deletePost(index) {
+        let posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
+        posts.splice(index, 1);
+        localStorage.setItem('reels_posts', JSON.stringify(posts));
+        loadPosts();
+    }
+    // --- Reels ---
+    // --- Reels with Song ---
+    function addReel() {
+        const videoInput = document.getElementById('reelVideo');
+        const songInput = document.getElementById('reelSong');
+        if(!videoInput.files[0] && !songInput.files[0]) return alert('Select a video or a song!');
+        const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+        let reel = {time: new Date().toLocaleString()};
+        function saveReel() {
+            reels.unshift(reel);
+            localStorage.setItem('reels_reels', JSON.stringify(reels));
+            videoInput.value = '';
+            songInput.value = '';
+            loadReels();
+        }
+        if(videoInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                reel.video = ev.target.result;
+                if(songInput.files[0]) {
+                    const songReader = new FileReader();
+                    songReader.onload = function(ev2) {
+                        reel.song = ev2.target.result;
+                        saveReel();
+                    }
+                    songReader.readAsDataURL(songInput.files[0]);
+                } else {
+                    saveReel();
+                }
+            }
+            reader.readAsDataURL(videoInput.files[0]);
+        } else if(songInput.files[0]) {
+            const songReader = new FileReader();
+            songReader.onload = function(ev2) {
+                reel.song = ev2.target.result;
+                saveReel();
+            }
+            songReader.readAsDataURL(songInput.files[0]);
+        }
+    }
+    function loadReels() {
+        const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+        const reelsDiv = document.getElementById('reels');
+        reelsDiv.innerHTML = reels.map((reel, i) => `
+            <div class="post">
+                <span class="user">You</span>
+                <span class="time">${reel.time}</span>
+                ${reel.video ? `<video src="${reel.video}" controls style="width:100%;border-radius:8px;margin-top:8px;"></video>` : ''}
+                ${reel.song ? `<audio src="${reel.song}" controls style="width:100%;margin-top:8px;"></audio>` : ''}
+                <div class="actions">
+                    <span>Like</span>
+                    <span>Comment</span>
+                    <span>Share</span>
+                    <span style="color:#e74c3c;cursor:pointer;" onclick="deleteReel(${i})">Delete</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    function deleteReel(index) {
+        let reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+        reels.splice(index, 1);
+        localStorage.setItem('reels_reels', JSON.stringify(reels));
+        loadReels();
+    }
+    // --- Stories ---
+    // --- Stories with Song ---
+    function addStory() {
+        const text = document.getElementById('storyText').value;
+        const imgInput = document.getElementById('storyImage');
+        const songInput = document.getElementById('storySong');
+        if(!text && !imgInput.files[0] && !songInput.files[0]) return alert('Write something or add media/song!');
+        const stories = JSON.parse(localStorage.getItem('reels_stories')||'[]');
+        let story = {text, time: new Date().toLocaleString(), expires: Date.now()+24*60*60*1000};
+        function saveStory() {
+            stories.unshift(story);
+            localStorage.setItem('reels_stories', JSON.stringify(stories));
+            document.getElementById('storyText').value = '';
+            imgInput.value = '';
+            songInput.value = '';
+            loadStories();
+        }
+        if(imgInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                story.media = ev.target.result;
+                if(songInput.files[0]) {
+                    const songReader = new FileReader();
+                    songReader.onload = function(ev2) {
+                        story.song = ev2.target.result;
+                        saveStory();
+                    }
+                    songReader.readAsDataURL(songInput.files[0]);
+                } else {
+                    saveStory();
+                }
+            }
+            reader.readAsDataURL(imgInput.files[0]);
+        } else if(songInput.files[0]) {
+            const songReader = new FileReader();
+            songReader.onload = function(ev2) {
+                story.song = ev2.target.result;
+                saveStory();
+            }
+            songReader.readAsDataURL(songInput.files[0]);
+        } else {
+            saveStory();
+        }
+    }
+    function loadStories() {
+        let stories = JSON.parse(localStorage.getItem('reels_stories')||'[]');
+        const now = Date.now();
+        stories = stories.filter(s=>s.expires>now);
+        localStorage.setItem('reels_stories', JSON.stringify(stories));
+        document.getElementById('stories').innerHTML = stories.map(story => `
+            <div class="post">
+                <span class="user">You</span>
+                <span class="time">${story.time}</span>
+                <div class="content">${highlightTags(story.text ? story.text : '')}</div>
+                ${story.media ? (story.media.startsWith('data:video') ? `<video src="${story.media}" controls style="width:100%;border-radius:8px;margin-top:8px;"></video>` : `<img src="${story.media}" style="max-width:100%;border-radius:8px;margin-top:8px;">`) : ''}
+                ${story.song ? `<audio src="${story.song}" controls style="width:100%;margin-top:8px;"></audio>` : ''}
+            </div>
+        `).join('');
+    }
+    // --- Notes ---
+    function showNotes() {
+        document.getElementById('feedSection').style.display = 'none';
+        document.getElementById('reelsSection').style.display = 'none';
+        document.getElementById('profileSection').style.display = 'none';
+        document.getElementById('storiesSection').style.display = 'none';
+        document.getElementById('notesSection').style.display = '';
+        loadNotes();
+    }
+    function addNote() {
+        const text = document.getElementById('noteText').value;
+        const songInput = document.getElementById('noteSong');
+        if(!text && !songInput.files[0]) return alert('Write something or add a song!');
+        const notes = JSON.parse(localStorage.getItem('reels_notes')||'[]');
+        let note = {text, time: new Date().toLocaleString()};
+        if(songInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                note.song = ev.target.result;
+                notes.unshift(note);
+                localStorage.setItem('reels_notes', JSON.stringify(notes));
+                document.getElementById('noteText').value = '';
+                songInput.value = '';
+                loadNotes();
+            }
+            reader.readAsDataURL(songInput.files[0]);
+        } else {
+            notes.unshift(note);
+            localStorage.setItem('reels_notes', JSON.stringify(notes));
+            document.getElementById('noteText').value = '';
+            loadNotes();
+        }
+    }
+    function loadNotes() {
+        const notes = JSON.parse(localStorage.getItem('reels_notes')||'[]');
+        document.getElementById('notes').innerHTML = notes.map(note => `
+            <div class="post">
+                <span class="user">You</span>
+                <span class="time">${note.time}</span>
+                <div class="content">${highlightTags(note.text ? note.text : '')}</div>
+                ${note.song ? `<audio src="${note.song}" controls style="width:100%;margin-top:8px;"></audio>` : ''}
+            </div>
+        `).join('');
+    }
+    // --- Logout ---
+    function logout() {
+        localStorage.removeItem('reels_user_email');
+        localStorage.removeItem('reels_user_name');
+        localStorage.removeItem('reels_profile_img');
+        location.reload();
+    }
+    // --- Dark Mode ---
+    function toggleDarkMode() {
+        const dark = document.body.classList.toggle('dark-mode');
+        document.getElementById('darkModeBtn').innerText = dark ? '☀️' : '🌙';
+        document.getElementById('darkModeStyle').innerHTML = dark ? `
+            body { background: #18191a; color: #e4e6eb; }
+            .header, .sidebar, .post, .new-post, #searchResults, #notificationBar { background: #242526 !important; color: #e4e6eb !important; }
+            input, textarea, button { background: #3a3b3c !important; color: #e4e6eb !important; border-color: #555 !important; }
+        ` : '';
+        localStorage.setItem('reels_dark_mode', dark ? '1' : '0');
+    }
+    if(localStorage.getItem('reels_dark_mode')==='1') setTimeout(toggleDarkMode, 100);
+    // --- Search ---
+    function searchContent() {
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const resultsDiv = document.getElementById('searchResults');
+        if(!q) { resultsDiv.style.display='none'; return; }
+        let posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
+        let reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+        let users = [localStorage.getItem('reels_user_name')||'You'];
+        let postResults = posts.filter(p=>p.text && p.text.toLowerCase().includes(q));
+        let reelResults = reels.filter(r=>r.time && r.time.toLowerCase().includes(q));
+        let userResults = users.filter(u=>u.toLowerCase().includes(q));
+        let html = '';
+        if(userResults.length) html += '<b>Users:</b><br>' + userResults.map(u=>`<div>@${u}</div>`).join('');
+        if(postResults.length) html += '<b>Posts:</b><br>' + postResults.map(p=>`<div>${highlightTags(p.text)}</div>`).join('');
+        if(reelResults.length) html += '<b>Reels:</b><br>' + reelResults.map(r=>`<div>${highlightTags(r.time)}</div>`).join('');
+        resultsDiv.innerHTML = html || 'No results.';
+        resultsDiv.style.display = 'block';
+    }
+    document.body.addEventListener('click', function(e){
+        if(e.target.id!=='searchInput') document.getElementById('searchResults').style.display='none';
+    });
+    // --- Hashtags & Mentions ---
+    function highlightTags(text) {
+        if(!text) return '';
+        return text.replace(/(#[\w]+)/g, '<span style="color:#1877f2;">$1</span>')
+                   .replace(/(@[\w]+)/g, '<span style="color:#43a047;">$1</span>');
+    }
+    // Media Preview for Post
+    document.getElementById('postImage').addEventListener('change', function(e) {
+        const preview = document.getElementById('postPreview') || document.createElement('div');
+        preview.id = 'postPreview';
+        preview.innerHTML = '';
+        if(e.target.files[0]) {
+            const file = e.target.files[0];
+            if(file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                preview.appendChild(img);
+            }
+        }
+        e.target.parentNode.appendChild(preview);
+    });
+    document.getElementById('reelVideo').addEventListener('change', function(e) {
+        const preview = document.getElementById('reelPreview') || document.createElement('div');
+        preview.id = 'reelPreview';
+        preview.innerHTML = '';
+        if(e.target.files[0]) {
+            const file = e.target.files[0];
+            if(file.type.startsWith('video/')) {
+                const vid = document.createElement('video');
+                vid.src = URL.createObjectURL(file);
+                vid.controls = true;
+                vid.style.width = '100%';
+                vid.style.borderRadius = '8px';
+                preview.appendChild(vid);
+            }
+        }
+        e.target.parentNode.appendChild(preview);
+    });
+    document.getElementById('storyImage').addEventListener('change', function(e) {
+        const preview = document.getElementById('storyPreview');
+        preview.innerHTML = '';
+        if(e.target.files[0]) {
+            const file = e.target.files[0];
+            if(file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                preview.appendChild(img);
+            } else if(file.type.startsWith('video/')) {
+                const vid = document.createElement('video');
+                vid.src = URL.createObjectURL(file);
+                vid.controls = true;
+                vid.style.width = '100%';
+                vid.style.borderRadius = '8px';
+                preview.appendChild(vid);
+            }
+        }
+    });
+    // --- Backend Placeholder ---
+    // To use a real backend, replace all localStorage.* calls with API requests to your server.
+    // Example: fetch('/api/posts', {method:'POST', body: JSON.stringify(post)})
+    // --- Profile Submenu ---
+function toggleProfileSubmenu(e) {
+    e.stopPropagation();
+    const submenu = document.getElementById('profileSubmenu');
+    if(submenu.style.display==='block') {
+        submenu.style.display = 'none';
+        return;
+    }
+    // Build submenu options
+    let loggedIn = !!localStorage.getItem('reels_user_email');
+    submenu.innerHTML = `
+        <div style="padding:8px 16px;cursor:pointer;" onclick="${loggedIn ? 'logout()' : 'showLoginModal()'};document.getElementById('profileSubmenu').style.display='none'">${loggedIn ? 'Logout' : 'Login'}</div>
+        <div style="padding:8px 16px;cursor:pointer;" onclick="triggerProfileUpload();document.getElementById('profileSubmenu').style.display='none'">Change Profile Picture</div>
+    `;
+    submenu.style.display = 'block';
+}
+function showLoginModal() {
+    document.getElementById('loginModal').style.display = 'flex';
+}
+function triggerProfileUpload() {
+    document.getElementById('profileUpload').click();
+}
+document.body.addEventListener('click', function(e){
+    const submenu = document.getElementById('profileSubmenu');
+    if(submenu && submenu.style.display==='block' && !e.target.closest('#profileMenu')) {
+        submenu.style.display = 'none';
+    }
+});
+    </script>
+</body>
+</html>
