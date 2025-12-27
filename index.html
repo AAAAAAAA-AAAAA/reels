@@ -134,20 +134,22 @@
             .feed, .post, .new-post { padding: 8px !important; }
             #searchResults { left: 0; transform: none; min-width: 90vw; }
         }
+        button, .post .actions span {
+            touch-action: manipulation;
+            min-height: 44px;
+            min-width: 44px;
+        }
+        input, textarea {
+            font-size: 1.1em;
+        }
     </style>
 </head>
 <body>
     <!-- Login Modal -->
     <div id="loginModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:100;">
         <div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);min-width:320px;">
-            <h2 style="margin-top:0;color:#1877f2;">Login</h2>
-            <div id="g_id_onload"
-                data-client_id="YOUR_GOOGLE_CLIENT_ID"
-                data-callback="onGoogleSignIn"
-                data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
-            <button onclick="continueAsGuest()" style="width:100%;background:#eee;color:#444;border:none;padding:10px;border-radius:8px;font-size:1em;cursor:pointer;margin-top:16px;">Continue as Guest</button>
+            <h2 style="margin-top:0;color:#1877f2;">Welcome</h2>
+            <button onclick="showDisplayNameModal()" style="width:100%;background:#1877f2;color:#fff;border:none;padding:12px 0;border-radius:8px;font-size:1.1em;cursor:pointer;margin-top:16px;">Enter Display Name</button>
         </div>
     </div>
     <!-- User Switch Modal -->
@@ -168,7 +170,6 @@
         </div>
     </div>
     <div id="notificationBar" style="display:none;position:fixed;top:70px;right:30px;z-index:300;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:16px 24px;min-width:220px;"></div>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <div class="header">
         <div class="logo">Reels</div>
         <div class="search">
@@ -277,15 +278,6 @@ function saveDisplayName() {
     loadStories();
 }
 // --- Update Login/Guest to prompt for display name ---
-function onGoogleSignIn(response) {
-    const data = parseJwt(response.credential);
-    localStorage.setItem('reels_user_email', data.email);
-    localStorage.setItem('reels_user_name', data.name);
-    localStorage.setItem('reels_profile_img', data.picture);
-    document.getElementById('loginModal').style.display = 'none';
-    setTimeout(promptDisplayName, 200);
-    loadProfileImg();
-}
 function continueAsGuest() {
     localStorage.setItem('reels_user_email', 'guest');
     localStorage.setItem('reels_user_name', 'Guest');
@@ -334,15 +326,15 @@ function loadPosts() {
             <div class="content">${highlightTags(post.text ? post.text : '')}</div>
             ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
             <div class="actions">
-                <span onclick="likePost(${i})">👍 Like (${post.likes||0})</span>
-                <span onclick="toggleComments(${i})">💬 Comment (${post.comments?post.comments.length:0})</span>
+                <span onclick="likePost(${i})" ontouchstart="likePost(${i})">👍 Like (${post.likes||0})</span>
+                <span>💬 Comment (${post.comments?post.comments.length:0})</span>
                 <span>Share</span>
-                ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})">Delete</span>` : ''}
+                ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})" ontouchstart="deletePost(${i})">Delete</span>` : ''}
             </div>
-            <div id="comments-${i}" style="display:none;margin-top:10px;">
+            <div id="comments-${i}" style="display:block;margin-top:10px;">
                 <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
-                <input type="text" id="commentInput-${i}" placeholder="Add a comment..." style="width:70%;padding:4px 8px;border-radius:6px;border:1px solid #ddd;">
-                <button onclick="addComment(${i})" style="padding:4px 10px;border-radius:6px;border:none;background:#1877f2;color:#fff;">Post</button>
+                <input type="text" id="commentInput-${i}" placeholder="Add a comment..." style="width:70%;padding:10px 12px;border-radius:8px;border:1px solid #ddd;font-size:1em;">
+                <button onclick="addComment(${i})" ontouchstart="addComment(${i})" style="padding:8px 18px;border-radius:8px;border:none;background:#1877f2;color:#fff;font-size:1em;">Post</button>
             </div>
         </div>
     `).join('');
@@ -590,10 +582,16 @@ function updateLoginLogoutBtn() {
         btn.onclick = showLoginModal;
     }
 }
+function showDisplayNameModal() {
+    document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('nameModal').style.display = 'flex';
+    document.getElementById('displayNameInput').value = '';
+}
 window.onload = function() {
     updateLoginLogoutBtn();
-    if(!localStorage.getItem('reels_user_email')) {
-        document.getElementById('loginModal').style.display = 'flex';
+    if(!localStorage.getItem('reels_user_display_name')) {
+        document.getElementById('loginModal').style.display = 'none';
+        document.getElementById('nameModal').style.display = 'flex';
     } else {
         document.getElementById('loginModal').style.display = 'none';
     }
