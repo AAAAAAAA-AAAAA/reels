@@ -261,6 +261,21 @@
     </div>
     <div id="searchResults" style="display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#fff;z-index:500;min-width:300px;max-width:90vw;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:16px;"></div>
     <style id="darkModeStyle"></style>
+    <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCraDYxfhxC1y6WpmfWbkD8-4BB5k9sIHM",
+  authDomain: "postanugget.firebaseapp.com",
+  projectId: "postanugget",
+  storageBucket: "postanugget.firebasestorage.app",
+  messagingSenderId: "369508669402",
+  appId: "1:369508669402:web:ced385f8d553292e7b52e3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
     <script>
     // --- Display Name Modal ---
 function promptDisplayName() {
@@ -294,50 +309,52 @@ function addPost() {
     const text = document.getElementById('postText').value;
     const imgInput = document.getElementById('postImage');
     if(!text && !imgInput.files[0]) return alert('Write something or add an image!');
-    const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
     const user = getDisplayName();
     let post = {user, text, img: null, time: new Date().toLocaleString(), likes: 0, comments: []};
     if(imgInput.files[0]) {
         const reader = new FileReader();
         reader.onload = function(ev) {
             post.img = ev.target.result;
-            posts.unshift(post);
-            localStorage.setItem('reels_posts', JSON.stringify(posts));
+            db.ref('posts').push(post);
             document.getElementById('postText').value = '';
             imgInput.value = '';
-            loadPosts();
         }
         reader.readAsDataURL(imgInput.files[0]);
     } else {
-        posts.unshift(post);
-        localStorage.setItem('reels_posts', JSON.stringify(posts));
+        db.ref('posts').push(post);
         document.getElementById('postText').value = '';
-        loadPosts();
     }
 }
 function loadPosts() {
-    const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
     const postsDiv = document.getElementById('posts');
-    const currentUser = getDisplayName();
-    postsDiv.innerHTML = posts.map((post, i) => `
-        <div class="post">
-            <span class="user">${post.user}</span>
-            <span class="time">${post.time}</span>
-            <div class="content">${highlightTags(post.text ? post.text : '')}</div>
-            ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
-            <div class="actions">
-                <span onclick="likePost(${i})" ontouchstart="likePost(${i})">👍 Like (${post.likes||0})</span>
-                <span>💬 Comment (${post.comments?post.comments.length:0})</span>
-                <span>Share</span>
-                ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})" ontouchstart="deletePost(${i})">Delete</span>` : ''}
+    db.ref('posts').on('value', (snapshot) => {
+        const posts = [];
+        snapshot.forEach(child => {
+            const post = child.val();
+            post._id = child.key;
+            posts.unshift(post);
+        });
+        const currentUser = getDisplayName();
+        postsDiv.innerHTML = posts.map((post, i) => `
+            <div class="post">
+                <span class="user">${post.user}</span>
+                <span class="time">${post.time}</span>
+                <div class="content">${highlightTags(post.text ? post.text : '')}</div>
+                ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
+                <div class="actions">
+                    <span onclick="likePost('${post._id}')">👍 Like (${post.likes||0})</span>
+                    <span>💬 Comment (${post.comments?post.comments.length:0})</span>
+                    <span>Share</span>
+                    ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost('${post._id}')">Delete</span>` : ''}
+                </div>
+                <div id="comments-${post._id}" style="display:block;margin-top:10px;">
+                    <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
+                    <input type="text" id="commentInput-${post._id}" placeholder="Add a comment..." style="width:70%;padding:10px 12px;border-radius:8px;border:1px solid #ddd;font-size:1em;">
+                    <button onclick="addComment('${post._id}')" style="padding:8px 18px;border-radius:8px;border:none;background:#1877f2;color:#fff;font-size:1em;">Post</button>
+                </div>
             </div>
-            <div id="comments-${i}" style="display:block;margin-top:10px;">
-                <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
-                <input type="text" id="commentInput-${i}" placeholder="Add a comment..." style="width:70%;padding:10px 12px;border-radius:8px;border:1px solid #ddd;font-size:1em;">
-                <button onclick="addComment(${i})" ontouchstart="addComment(${i})" style="padding:8px 18px;border-radius:8px;border:none;background:#1877f2;color:#fff;font-size:1em;">Post</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    });
 }
 function likePost(i) {
     const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
