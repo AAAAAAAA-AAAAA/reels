@@ -134,22 +134,20 @@
             .feed, .post, .new-post { padding: 8px !important; }
             #searchResults { left: 0; transform: none; min-width: 90vw; }
         }
-        button, .post .actions span {
-            touch-action: manipulation;
-            min-height: 44px;
-            min-width: 44px;
-        }
-        input, textarea {
-            font-size: 1.1em;
-        }
     </style>
 </head>
 <body>
     <!-- Login Modal -->
     <div id="loginModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:100;">
         <div style="background:#fff;padding:32px 24px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);min-width:320px;">
-            <h2 style="margin-top:0;color:#1877f2;">Welcome</h2>
-            <button onclick="showDisplayNameModal()" style="width:100%;background:#1877f2;color:#fff;border:none;padding:12px 0;border-radius:8px;font-size:1.1em;cursor:pointer;margin-top:16px;">Enter Display Name</button>
+            <h2 style="margin-top:0;color:#1877f2;">Login</h2>
+            <div id="g_id_onload"
+                data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                data-callback="onGoogleSignIn"
+                data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+            <button onclick="continueAsGuest()" style="width:100%;background:#eee;color:#444;border:none;padding:10px;border-radius:8px;font-size:1em;cursor:pointer;margin-top:16px;">Continue as Guest</button>
         </div>
     </div>
     <!-- User Switch Modal -->
@@ -170,6 +168,7 @@
         </div>
     </div>
     <div id="notificationBar" style="display:none;position:fixed;top:70px;right:30px;z-index:300;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:16px 24px;min-width:220px;"></div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <div class="header">
         <div class="logo">Reels</div>
         <div class="search">
@@ -178,7 +177,7 @@
         <div class="header-actions" style="display:flex;align-items:center;gap:8px;">
             <button id="darkModeBtn" onclick="toggleDarkMode()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">🌙</button>
             <button onclick="openUserSwitch()" id="switchUserBtn" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Switch User</button>
-            <button id="loginLogoutBtn" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Login</button>
+            <button id="logoutBtn" onclick="logout()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Logout</button>
             <div class="profile" style="position:relative;">
                 <label for="profileUpload" style="cursor:pointer;">
                     <img id="profileImg" src="" alt="Profile" style="width:40px;height:40px;border-radius:50%;background:#eee;object-fit:cover;">
@@ -261,21 +260,6 @@
     </div>
     <div id="searchResults" style="display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#fff;z-index:500;min-width:300px;max-width:90vw;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:16px;"></div>
     <style id="darkModeStyle"></style>
-    <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCraDYxfhxC1y6WpmfWbkD8-4BB5k9sIHM",
-  authDomain: "postanugget.firebaseapp.com",
-  projectId: "postanugget",
-  storageBucket: "postanugget.firebasestorage.app",
-  messagingSenderId: "369508669402",
-  appId: "1:369508669402:web:ced385f8d553292e7b52e3"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-</script>
     <script>
     // --- Display Name Modal ---
 function promptDisplayName() {
@@ -293,6 +277,15 @@ function saveDisplayName() {
     loadStories();
 }
 // --- Update Login/Guest to prompt for display name ---
+function onGoogleSignIn(response) {
+    const data = parseJwt(response.credential);
+    localStorage.setItem('reels_user_email', data.email);
+    localStorage.setItem('reels_user_name', data.name);
+    localStorage.setItem('reels_profile_img', data.picture);
+    document.getElementById('loginModal').style.display = 'none';
+    setTimeout(promptDisplayName, 200);
+    loadProfileImg();
+}
 function continueAsGuest() {
     localStorage.setItem('reels_user_email', 'guest');
     localStorage.setItem('reels_user_name', 'Guest');
@@ -309,52 +302,49 @@ function addPost() {
     const text = document.getElementById('postText').value;
     const imgInput = document.getElementById('postImage');
     if(!text && !imgInput.files[0]) return alert('Write something or add an image!');
+    const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
     const user = getDisplayName();
     let post = {user, text, img: null, time: new Date().toLocaleString(), likes: 0, comments: []};
     if(imgInput.files[0]) {
         const reader = new FileReader();
         reader.onload = function(ev) {
             post.img = ev.target.result;
-            db.ref('posts').push(post);
+            posts.unshift(post);
+            localStorage.setItem('reels_posts', JSON.stringify(posts));
             document.getElementById('postText').value = '';
             imgInput.value = '';
+            loadPosts();
         }
         reader.readAsDataURL(imgInput.files[0]);
     } else {
-        db.ref('posts').push(post);
+        posts.unshift(post);
+        localStorage.setItem('reels_posts', JSON.stringify(posts));
         document.getElementById('postText').value = '';
+        loadPosts();
     }
 }
 function loadPosts() {
+    const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
     const postsDiv = document.getElementById('posts');
-    db.ref('posts').on('value', (snapshot) => {
-        const posts = [];
-        snapshot.forEach(child => {
-            const post = child.val();
-            post._id = child.key;
-            posts.unshift(post);
-        });
-        const currentUser = getDisplayName();
-        postsDiv.innerHTML = posts.map((post, i) => `
-            <div class="post">
-                <span class="user">${post.user}</span>
-                <span class="time">${post.time}</span>
-                <div class="content">${highlightTags(post.text ? post.text : '')}</div>
-                ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
-                <div class="actions">
-                    <span onclick="likePost('${post._id}')">👍 Like (${post.likes||0})</span>
-                    <span>💬 Comment (${post.comments?post.comments.length:0})</span>
-                    <span>Share</span>
-                    ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost('${post._id}')">Delete</span>` : ''}
-                </div>
-                <div id="comments-${post._id}" style="display:block;margin-top:10px;">
-                    <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
-                    <input type="text" id="commentInput-${post._id}" placeholder="Add a comment..." style="width:70%;padding:10px 12px;border-radius:8px;border:1px solid #ddd;font-size:1em;">
-                    <button onclick="addComment('${post._id}')" style="padding:8px 18px;border-radius:8px;border:none;background:#1877f2;color:#fff;font-size:1em;">Post</button>
-                </div>
+    postsDiv.innerHTML = posts.map((post, i) => `
+        <div class="post">
+            <span class="user">${post.user}</span>
+            <span class="time">${post.time}</span>
+            <div class="content">${highlightTags(post.text ? post.text : '')}</div>
+            ${post.img ? `<img src="${post.img}" style="max-width:100%;border-radius:8px;margin-top:8px;">` : ''}
+            <div class="actions">
+                <span onclick="likePost(${i})">👍 Like (${post.likes||0})</span>
+                <span onclick="toggleComments(${i})">💬 Comment (${post.comments?post.comments.length:0})</span>
+                <span>Share</span>
+                <span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})">Delete</span>
             </div>
-        `).join('');
-    });
+            <div id="comments-${i}" style="display:none;margin-top:10px;">
+                <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
+                <input type="text" id="commentInput-${i}" placeholder="Add a comment..." style="width:70%;padding:4px 8px;border-radius:6px;border:1px solid #ddd;">
+                <button onclick="addComment(${i})" style="padding:4px 10px;border-radius:6px;border:none;background:#1877f2;color:#fff;">Post</button>
+            </div>
+        </div>
+    `).join('');
 }
 function likePost(i) {
     const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
@@ -379,66 +369,6 @@ function addComment(i) {
     toggleComments(i);
     toggleComments(i);
 }
-function deletePost(i) {
-    let posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
-    const currentUser = getDisplayName();
-    if(posts[i].user !== currentUser) {
-        alert('You can only delete your own posts.');
-        return;
-    }
-    posts.splice(i, 1);
-    localStorage.setItem('reels_posts', JSON.stringify(posts));
-    loadPosts();
-}
-// --- Reel Functions ---
-function addReel() {
-    const videoInput = document.getElementById('reelVideo');
-    const audioInput = document.getElementById('reelSong');
-    if (!videoInput.files[0]) {
-        alert('Please select a video to upload as a reel!');
-        return;
-    }
-    const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
-    const user = getDisplayName();
-    let reel = {user, time: new Date().toLocaleString(), video: null, audio: null};
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        reel.video = ev.target.result;
-        if (audioInput.files[0]) {
-            const audioReader = new FileReader();
-            audioReader.onload = function(aev) {
-                reel.audio = aev.target.result;
-                reels.unshift(reel);
-                localStorage.setItem('reels_reels', JSON.stringify(reels));
-                videoInput.value = '';
-                audioInput.value = '';
-                loadReels();
-            };
-            audioReader.readAsDataURL(audioInput.files[0]);
-        } else {
-            reels.unshift(reel);
-            localStorage.setItem('reels_reels', JSON.stringify(reels));
-            videoInput.value = '';
-            audioInput.value = '';
-            loadReels();
-        }
-    };
-    reader.readAsDataURL(videoInput.files[0]);
-}
-
-function loadReels() {
-    const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
-    const reelsDiv = document.getElementById('reels');
-    reelsDiv.innerHTML = reels.map((reel, i) => `
-        <div class="post">
-            <span class="user">${reel.user}</span>
-            <span class="time">${reel.time}</span>
-            <div class="content">Reel Video:</div>
-            ${reel.video ? `<video src="${reel.video}" controls style="width:100%;border-radius:8px;margin-top:8px;"></video>` : ''}
-            ${reel.audio ? `<div style='margin-top:8px;'>Audio: <audio src="${reel.audio}" controls></audio></div>` : ''}
-        </div>
-    `).join('');
-}
 // --- Profile Image ---
     function uploadProfile(e) {
         const file = e.target.files[0];
@@ -460,7 +390,6 @@ function loadReels() {
         localStorage.removeItem('reels_user_email');
         localStorage.removeItem('reels_user_name');
         localStorage.removeItem('reels_profile_img');
-        updateLoginLogoutBtn();
         location.reload();
     }
     // --- Dark Mode ---
@@ -588,36 +517,6 @@ document.body.addEventListener('click', function(e){
         submenu.style.display = 'none';
     }
 });
-function updateLoginLogoutBtn() {
-    const loggedIn = !!localStorage.getItem('reels_user_email');
-    const btn = document.getElementById('loginLogoutBtn');
-    if(loggedIn) {
-        btn.textContent = 'Logout';
-        btn.onclick = logout;
-    } else {
-        btn.textContent = 'Login';
-        btn.onclick = showLoginModal;
-    }
-}
-function showDisplayNameModal() {
-    document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('nameModal').style.display = 'flex';
-    document.getElementById('displayNameInput').value = '';
-}
-window.onload = function() {
-    updateLoginLogoutBtn();
-    if(!localStorage.getItem('reels_user_display_name')) {
-        document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('nameModal').style.display = 'flex';
-    } else {
-        document.getElementById('loginModal').style.display = 'none';
-    }
-    loadProfileImg();
-    loadPosts();
-    loadReels();
-    loadStories();
-    loadNotes();
-}
     </script>
 </body>
 </html>
