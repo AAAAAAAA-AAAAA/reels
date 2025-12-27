@@ -177,7 +177,7 @@
         <div class="header-actions" style="display:flex;align-items:center;gap:8px;">
             <button id="darkModeBtn" onclick="toggleDarkMode()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">🌙</button>
             <button onclick="openUserSwitch()" id="switchUserBtn" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Switch User</button>
-            <button id="logoutBtn" onclick="logout()" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Logout</button>
+            <button id="loginLogoutBtn" style="background:#eee;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Login</button>
             <div class="profile" style="position:relative;">
                 <label for="profileUpload" style="cursor:pointer;">
                     <img id="profileImg" src="" alt="Profile" style="width:40px;height:40px;border-radius:50%;background:#eee;object-fit:cover;">
@@ -326,6 +326,7 @@ function addPost() {
 function loadPosts() {
     const posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
     const postsDiv = document.getElementById('posts');
+    const currentUser = getDisplayName();
     postsDiv.innerHTML = posts.map((post, i) => `
         <div class="post">
             <span class="user">${post.user}</span>
@@ -336,7 +337,7 @@ function loadPosts() {
                 <span onclick="likePost(${i})">👍 Like (${post.likes||0})</span>
                 <span onclick="toggleComments(${i})">💬 Comment (${post.comments?post.comments.length:0})</span>
                 <span>Share</span>
-                <span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})">Delete</span>
+                ${post.user === currentUser ? `<span style="color:#e74c3c;cursor:pointer;" onclick="deletePost(${i})">Delete</span>` : ''}
             </div>
             <div id="comments-${i}" style="display:none;margin-top:10px;">
                 <div>${(post.comments||[]).map(c=>`<div style='margin-bottom:4px;'><b>${c.user}:</b> ${c.text}</div>`).join('')}</div>
@@ -369,6 +370,66 @@ function addComment(i) {
     toggleComments(i);
     toggleComments(i);
 }
+function deletePost(i) {
+    let posts = JSON.parse(localStorage.getItem('reels_posts')||'[]');
+    const currentUser = getDisplayName();
+    if(posts[i].user !== currentUser) {
+        alert('You can only delete your own posts.');
+        return;
+    }
+    posts.splice(i, 1);
+    localStorage.setItem('reels_posts', JSON.stringify(posts));
+    loadPosts();
+}
+// --- Reel Functions ---
+function addReel() {
+    const videoInput = document.getElementById('reelVideo');
+    const audioInput = document.getElementById('reelSong');
+    if (!videoInput.files[0]) {
+        alert('Please select a video to upload as a reel!');
+        return;
+    }
+    const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+    const user = getDisplayName();
+    let reel = {user, time: new Date().toLocaleString(), video: null, audio: null};
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        reel.video = ev.target.result;
+        if (audioInput.files[0]) {
+            const audioReader = new FileReader();
+            audioReader.onload = function(aev) {
+                reel.audio = aev.target.result;
+                reels.unshift(reel);
+                localStorage.setItem('reels_reels', JSON.stringify(reels));
+                videoInput.value = '';
+                audioInput.value = '';
+                loadReels();
+            };
+            audioReader.readAsDataURL(audioInput.files[0]);
+        } else {
+            reels.unshift(reel);
+            localStorage.setItem('reels_reels', JSON.stringify(reels));
+            videoInput.value = '';
+            audioInput.value = '';
+            loadReels();
+        }
+    };
+    reader.readAsDataURL(videoInput.files[0]);
+}
+
+function loadReels() {
+    const reels = JSON.parse(localStorage.getItem('reels_reels')||'[]');
+    const reelsDiv = document.getElementById('reels');
+    reelsDiv.innerHTML = reels.map((reel, i) => `
+        <div class="post">
+            <span class="user">${reel.user}</span>
+            <span class="time">${reel.time}</span>
+            <div class="content">Reel Video:</div>
+            ${reel.video ? `<video src="${reel.video}" controls style="width:100%;border-radius:8px;margin-top:8px;"></video>` : ''}
+            ${reel.audio ? `<div style='margin-top:8px;'>Audio: <audio src="${reel.audio}" controls></audio></div>` : ''}
+        </div>
+    `).join('');
+}
 // --- Profile Image ---
     function uploadProfile(e) {
         const file = e.target.files[0];
@@ -390,6 +451,7 @@ function addComment(i) {
         localStorage.removeItem('reels_user_email');
         localStorage.removeItem('reels_user_name');
         localStorage.removeItem('reels_profile_img');
+        updateLoginLogoutBtn();
         location.reload();
     }
     // --- Dark Mode ---
@@ -517,6 +579,30 @@ document.body.addEventListener('click', function(e){
         submenu.style.display = 'none';
     }
 });
+function updateLoginLogoutBtn() {
+    const loggedIn = !!localStorage.getItem('reels_user_email');
+    const btn = document.getElementById('loginLogoutBtn');
+    if(loggedIn) {
+        btn.textContent = 'Logout';
+        btn.onclick = logout;
+    } else {
+        btn.textContent = 'Login';
+        btn.onclick = showLoginModal;
+    }
+}
+window.onload = function() {
+    updateLoginLogoutBtn();
+    if(!localStorage.getItem('reels_user_email')) {
+        document.getElementById('loginModal').style.display = 'flex';
+    } else {
+        document.getElementById('loginModal').style.display = 'none';
+    }
+    loadProfileImg();
+    loadPosts();
+    loadReels();
+    loadStories();
+    loadNotes();
+}
     </script>
 </body>
 </html>
